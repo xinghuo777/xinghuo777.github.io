@@ -50,7 +50,7 @@ const WALINE_SERVER_URL = '';
   /* ---------- 导航 ---------- */
   const NAV = [
     ['#/', '总纲'], ['#/system', '体系'], ['#/wuxing', '道法术器势'],
-    ['#/review', '每日复盘'], ['#/peak', '波峰'], ['#/notes', '笔记'], ['#/qa', '问答'],
+    ['#/review', '每日复盘'], ['#/reviews', '复盘日志'], ['#/peak', '波峰'], ['#/notes', '笔记'], ['#/qa', '问答'],
   ];
 
   function head(kicker, title, desc) {
@@ -189,6 +189,122 @@ const WALINE_SERVER_URL = '';
     `;
   }
 
+  function clsD(d) {
+    if (d === 'up') return 'bd-up';
+    if (d === 'down') return 'bd-down';
+    if (d === 'dim') return 'bd-dim';
+    return '';
+  }
+  function signCls(s) {
+    const t = String(s || '').trim();
+    if (t[0] === '+') return 'bd-up';
+    if (t[0] === '-') return 'bd-down';
+    return '';
+  }
+
+  function renderBoard(r) {
+    const b = r.board;
+    const env = b.env || {};
+    const sig = b.signal || {};
+    const sec = b.sectors || {};
+    const emo = b.emotion || {};
+    const ins = b.insight || {};
+
+    const indices = (env.indices || []).map(x =>
+      '<tr><td>' + esc(x.n) + '</td><td>' + esc(x.c) + '</td><td class="' + clsD(x.d) + '">' + esc(x.chg) + '</td></tr>').join('');
+    const breadth = (env.breadth || []).map(x =>
+      '<span class="bd-chip">' + esc(x.l) + ' <b class="' + clsD(x.d) + '">' + esc(x.v) + '</b></span>').join('');
+    const tech = (env.tech || []).map(x =>
+      '<div class="bd-kv"><span>' + esc(x.k) + '</span><span class="' + clsD(x.d) + '">' + esc(x.v) + '</span></div>').join('');
+    const envVerdicts = (env.verdicts || []).map(v =>
+      '<div class="bd-verdict' + (v.em ? ' em' : '') + '"><span class="bd-lead">' + esc(v.lead) + '</span><span>' + esc(v.body) + '</span></div>').join('');
+
+    const layers = (sig.pathA && sig.pathA.layers || []).map(l =>
+      '<div class="bd-layer"><span class="bd-mark ' + clsD(l.d) + '">' + esc(l.mark) + '</span><div><b>' + esc(l.t) + '</b> <span class="' + clsD(l.d) + '">' + esc(l.status) + '</span><br><span class="bd-dim">' + esc(l.body) + '</span></div></div>').join('');
+    const pathBItems = (sig.pathB && sig.pathB.items || []).map(it =>
+      '<div class="bd-layer"><div><b>' + esc(it.t) + '</b> <span class="' + clsD(it.d) + '">' + esc(it.status) + '</span><br><span class="bd-dim">' + esc(it.body) + '</span></div></div>').join('');
+
+    const indRows = (sec.industries && sec.industries.rows || []).map(x =>
+      '<tr><td>' + esc(x.n) + '</td><td class="' + signCls(x.d) + '">' + esc(x.d) + '</td><td class="' + signCls(x.d5) + '">' + esc(x.d5) + '</td><td class="' + signCls(x.d20) + '">' + esc(x.d20) + '</td><td class="bd-dim">' + esc(x.leader) + '</td></tr>').join('');
+    const indHead = (sec.industries && sec.industries.head || []).map(h => '<th>' + esc(h) + '</th>').join('');
+    const concepts = (sec.concepts && sec.concepts.items || []).map(x =>
+      '<span class="bd-chip">' + esc(x.n) + ' <b class="' + signCls(x.chg) + '">' + esc(x.chg) + '</b> <span class="bd-dim">' + esc(x.d5) + '</span></span>').join('');
+    const funds = (sec.funds && sec.funds.items || []).map(x =>
+      '<span class="bd-chip">' + esc(x.n) + ' <b class="' + signCls(x.chg) + '">' + esc(x.chg) + '</b> ' +
+      '<span class="' + signCls(x.day) + '">' + esc(x.day) + '</span> / <span class="' + signCls(x.d5) + '">' + esc(x.d5) + '</span> <span class="bd-dim">' + esc(x.ratio) + '</span></span>').join('');
+    const secVerdicts = (sec.verdicts || []).map(v =>
+      '<div class="bd-verdict"><span class="bd-lead">' + esc(v.lead) + '</span><span>' + esc(v.body) + '</span></div>').join('');
+
+    const coach = (b.coach || []).map(c => '<div>' + esc(c) + '</div>').join('');
+
+    return `
+    <div class="card board">
+      <div class="board-head">
+        <span class="board-date">${esc(r.date)}</span>
+        <span class="board-tag">${esc(r.tag || '')}</span>
+      </div>
+
+      <section class="bd-sec">
+        <h3 class="bd-h"><span class="bd-num">壹</span>大盘环境</h3>
+        ${indices ? '<table class="bd-table"><tbody><tr><th>指数</th><th>收盘</th><th>涨跌</th></tr>' + indices + '</tbody></table>' : ''}
+        ${breadth ? '<div class="bd-chips">' + breadth + '</div>' : ''}
+        ${env.shape ? '<div class="bd-box warn"><div class="bd-label">' + esc(env.shape.title) + '</div><div class="bd-boxbody">' + esc(env.shape.body) + '</div></div>' : ''}
+        ${env.anchor ? '<div class="bd-box"><div class="bd-label">' + esc(env.anchor.title) + '</div>' + (env.anchor.body || []).map(p => '<div class="bd-boxbody">' + esc(p) + '</div>').join('') + (env.anchor.flag ? '<div class="bd-flag">' + esc(env.anchor.flag) + '</div>' : '') + '</div>' : ''}
+        ${tech ? '<div class="bd-kvwrap">' + tech + '</div>' : ''}
+        ${envVerdicts}
+      </section>
+
+      <section class="bd-sec">
+        <h3 class="bd-h"><span class="bd-num">贰</span>止跌信号 · 双路径</h3>
+        ${sig.pathA ? '<div class="bd-sub">' + esc(sig.pathA.title) + ' —— ' + esc(sig.pathA.desc) + '</div>' + layers : ''}
+        ${sig.pathB ? '<div class="bd-box warn"><div class="bd-label">' + esc(sig.pathB.title) + '</div>' + (sig.pathB.note ? '<div class="bd-boxbody">' + esc(sig.pathB.note) + '</div>' : '') + pathBItems + (sig.pathB.flag ? '<div class="bd-flag">' + esc(sig.pathB.flag) + '</div>' : '') + '</div>' : ''}
+      </section>
+
+      <section class="bd-sec">
+        <h3 class="bd-h"><span class="bd-num">叁</span>板块扫描</h3>
+        ${indRows ? '<div class="bd-sub">' + esc(sec.industries.title) + '</div><table class="bd-table"><tbody><tr>' + indHead + '</tr>' + indRows + '</tbody></table>' : ''}
+        ${concepts ? '<div class="bd-sub">' + esc(sec.concepts.title) + '</div><div class="bd-chips">' + concepts + '</div>' : ''}
+        ${funds ? '<div class="bd-sub">' + esc(sec.funds.title) + '</div><div class="bd-chips">' + funds + '</div>' : ''}
+        ${secVerdicts}
+      </section>
+
+      <section class="bd-sec">
+        <h3 class="bd-h"><span class="bd-num">肆</span>情绪状态</h3>
+        <div class="bd-state"><span class="bd-state-name">${esc(emo.state || '')}</span><span class="bd-dim">${esc(emo.tag || '')}</span></div>
+        ${emo.body ? '<div class="bd-verdict"><span class="bd-lead">丁火自述</span><span>' + esc(emo.body) + '</span></div>' : ''}
+        ${emo.record ? '<div class="bd-verdict"><span class="bd-lead">值得记一笔</span><span>' + esc(emo.record) + '</span></div>' : ''}
+      </section>
+
+      <section class="bd-sec">
+        <h3 class="bd-h"><span class="bd-num">伍</span>心法碎片</h3>
+        ${ins.text ? '<div class="bd-xin">' + esc(ins.text) + '<span class="bd-xin-src">— ' + esc(ins.src || '') + ' —</span></div>' : ''}
+        ${ins.body ? '<div class="bd-verdict"><span>' + esc(ins.body) + '</span></div>' : ''}
+      </section>
+
+      ${coach ? '<div class="bd-coach">' + coach + '</div>' : ''}
+    </div>`;
+  }
+
+  function pageReviews() {
+    const R = window.DINGHUO_REVIEWS || [];
+    const body = R.length
+      ? R.map(r => r.board
+          ? renderBoard(r)
+          : `
+        <div class="card review-item">
+          <div class="review-head">
+            <span class="review-date">${esc(r.date)}</span>
+            <span class="review-env">${esc(r.env || '')}${r.emotion ? ' · ' + esc(r.emotion) : ''}</span>
+          </div>
+          ${r.envDetail ? '<p class="review-detail">' + esc(r.envDetail) + '</p>' : ''}
+          ${(r.sectors || []).length ? '<div class="review-sectors">' + r.sectors.map(s => '<span class="chip">' + esc(s) + '</span>').join('') + '</div>' : ''}
+          ${r.insight ? '<blockquote class="review-insight">' + esc(r.insight) + '</blockquote>' : ''}
+          ${r.coach ? '<p class="review-coach">' + esc(r.coach) + '</p>' : ''}
+        </div>`).join('')
+      : '<div class="card"><p style="color:var(--muted)">暂无复盘记录。等复盘后，这里会一条条沉淀下来。</p></div>';
+    return head('复盘日志', '每日 · 公开版', '完整看板：大盘环境、止跌信号、板块扫描、情绪状态、心法碎片、教练寄语——隐去操作与持仓。') + body;
+  }
+
   function pageQA() {
     const ready = WALINE_SERVER_URL && WALINE_SERVER_URL.length > 3;
     const inner = ready
@@ -260,7 +376,7 @@ const WALINE_SERVER_URL = '';
   /* ---------- 路由 ---------- */
   const PAGES = {
     '': pageHome, 'system': pageSystem, 'wuxing': pageWuxing,
-    'review': pageReview, 'peak': pagePeak, 'notes': pageNotes, 'qa': pageQA,
+    'review': pageReview, 'reviews': pageReviews, 'peak': pagePeak, 'notes': pageNotes, 'qa': pageQA,
   };
 
   function route() {
